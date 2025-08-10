@@ -1,0 +1,184 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StatusType {
+  PENDING
+  RESOLVED
+}
+
+enum MediaType {
+  IMAGE_JPEG
+  IMAGE_PNG
+  IMAGE_GIF
+  IMAGE_WEBP
+  VIDEO_MP4
+  VIDEO_WEBM
+  VIDEO_OGG
+  AUDIO_MP3
+  AUDIO_WAV
+  AUDIO_OGG
+  PDF
+  TEXT_PLAIN
+  TEXT_MARKDOWN
+}
+
+enum CommunityRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+  GUEST
+}
+
+model User {
+  id                BigInt        @id @default(autoincrement())
+  username          String        @unique
+  email             String        @unique
+  passwordHash      String
+  bio               String?
+  avatarUrl         String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  lastLoginAt       DateTime?
+
+  // Relations
+  communities       Community[]           @relation("UserCommunities") // Created communities
+  memberships       CommunityMembership[]
+  posts             Post[]
+  comments          Comment[]
+  votes             Vote[]
+  media             Media[]
+  notifications     Notification[]
+  reports           Report[]              @relation("ReportsByUser")
+}
+
+model Community {
+  id                BigInt        @id @default(autoincrement())
+  name              String        @unique
+  description       String?
+  rules             String?
+  createdBy         BigInt
+  createdAt         DateTime      @default(now())
+
+  // Relations
+  creator           User          @relation("UserCommunities", fields: [createdBy], references: [id], onDelete: Cascade)
+  memberships       CommunityMembership[]
+  posts             Post[]
+}
+
+model Notification {
+  id                BigInt        @id @default(autoincrement())
+  userId            BigInt
+  type              String
+  relatedId         BigInt?
+  readStatus        Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+
+  // Relations
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id               BigInt         @id @default(autoincrement())
+  reportedBy       BigInt
+  targetType       String
+  targetId         BigInt
+  reason           String
+  status           StatusType     @default(PENDING)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
+  reporter         User           @relation("ReportsByUser", fields: [reportedBy], references: [id], onDelete: Cascade)
+}
+
+model Media {
+  id               BigInt         @id @default(autoincrement())
+  uploaderId       BigInt
+  url              String
+  type             MediaType
+  createdAt        DateTime       @default(now())
+
+  // Relations
+  uploader         User           @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+}
+
+model CommunityMembership {
+  id             BigInt         @id @default(autoincrement())
+  communityId    BigInt
+  userId         BigInt
+  role           CommunityRole  @default(MEMBER)
+  joinedAt       DateTime       @default(now())
+
+  // Relations
+  community      Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, userId]) // Prevent duplicate membership
+}
+
+model Post {
+  id             BigInt         @id @default(autoincrement())
+  title          String
+  body           String?
+  mediaUrl       String?
+  upVoteCount    Int            @default(0)
+  downVoteCount  Int            @default(0)
+  communityId    BigInt
+  createdBy      BigInt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  community      Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  creator        User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  comments       Comment[]
+  votes          Vote[]
+}
+
+model Comment {
+  id             BigInt         @id @default(autoincrement())
+  body           String
+  postId         BigInt
+  createdBy      BigInt
+  parentId       BigInt?
+  upVoteCount    Int            @default(0)
+  downVoteCount  Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  post           Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  creator        User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  parent         Comment?       @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        Comment[]      @relation("CommentReplies")
+  votes          Vote[]
+}
+
+model Vote {
+  id             BigInt         @id @default(autoincrement())
+  userId         BigInt
+  postId         BigInt?
+  commentId      BigInt?
+  createdAt      DateTime       @default(now())
+
+  // Relations
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post           Post?          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment        Comment?       @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId, commentId]) // Prevent duplicate votes
+}
