@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
-    "@prisma/client": "^6.13.0",
+    "@prisma/client": "^6.14.0",
     "@tanstack/react-query": "^5.84.2",
     "bcrypt": "^6.0.0",
     "jsonwebtoken": "^9.0.2",
