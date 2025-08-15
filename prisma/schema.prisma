@@ -1,9 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// -------------------------
+// GENERATOR & DATASOURCE
+// -------------------------
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -14,6 +11,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// -------------------------
+// ENUMS
+// -------------------------
 enum StatusType {
   PENDING
   RESOLVED
@@ -43,19 +43,26 @@ enum CommunityRole {
   GUEST
 }
 
+// -------------------------
+// MODELS
+// -------------------------
 model User {
   id                BigInt        @id @default(autoincrement())
-  username          String        @unique
-  email             String        @unique
-  passwordHash      String
+  username          String?       @unique
+  email             String?       @unique
+  passwordHash      String?
   bio               String?
   avatarUrl         String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   lastLoginAt       DateTime?
 
-  // Relations
-  communities       Community[]           @relation("UserCommunities") // Created communities
+  // OAuth relations
+  accounts          Account[]
+  sessions          Session[]
+
+  // App relations
+  communities       Community[]           @relation("UserCommunities")
   memberships       CommunityMembership[]
   posts             Post[]
   comments          Comment[]
@@ -63,6 +70,42 @@ model User {
   media             Media[]
   notifications     Notification[]
   reports           Report[]              @relation("ReportsByUser")
+}
+
+model Account {
+  id                BigInt   @id @default(autoincrement())
+  userId            BigInt
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           BigInt   @id @default(autoincrement())
+  sessionToken String   @unique
+  userId       BigInt
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 model Community {
@@ -73,7 +116,6 @@ model Community {
   createdBy         BigInt
   createdAt         DateTime      @default(now())
 
-  // Relations
   creator           User          @relation("UserCommunities", fields: [createdBy], references: [id], onDelete: Cascade)
   memberships       CommunityMembership[]
   posts             Post[]
@@ -87,7 +129,6 @@ model Notification {
   readStatus        Boolean       @default(false)
   createdAt         DateTime      @default(now())
 
-  // Relations
   user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -101,7 +142,6 @@ model Report {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  // Relations
   reporter         User           @relation("ReportsByUser", fields: [reportedBy], references: [id], onDelete: Cascade)
 }
 
@@ -112,7 +152,6 @@ model Media {
   type             MediaType
   createdAt        DateTime       @default(now())
 
-  // Relations
   uploader         User           @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
 }
 
@@ -123,11 +162,10 @@ model CommunityMembership {
   role           CommunityRole  @default(MEMBER)
   joinedAt       DateTime       @default(now())
 
-  // Relations
   community      Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([communityId, userId]) // Prevent duplicate membership
+  @@unique([communityId, userId])
 }
 
 model Post {
@@ -142,7 +180,6 @@ model Post {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  // Relations
   community      Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
   creator        User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   comments       Comment[]
@@ -160,7 +197,6 @@ model Comment {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  // Relations
   post           Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
   creator        User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   parent         Comment?       @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
@@ -175,10 +211,9 @@ model Vote {
   commentId      BigInt?
   createdAt      DateTime       @default(now())
 
-  // Relations
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   post           Post?          @relation(fields: [postId], references: [id], onDelete: Cascade)
   comment        Comment?       @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, postId, commentId]) // Prevent duplicate votes
+  @@unique([userId, postId, commentId])
 }
