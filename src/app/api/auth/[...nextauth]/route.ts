@@ -16,7 +16,7 @@ const handler = NextAuth({
     async session({ session, user }) {
       // Attach the DB id to the session
       if (session.user) {
-        session.user.id = user.id;
+        session.user.id = user.id.toString();
       }
       return session;
     },

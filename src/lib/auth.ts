@@ -69,7 +69,7 @@ export async function getUserFromRequest(req: Request) {
         // otherwise treat as string id
         return payload.sub;
       }
-    })
+    })();
 
     const user = await prisma.user.findUnique({
       where: { id: userId } as any,
