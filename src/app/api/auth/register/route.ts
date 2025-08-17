@@ -12,7 +12,6 @@ const RegisterSchema = z.object({
   password: z.string().min(6),
 })
 
-
 export async function POST(req: Request) {
   try {
     const payload = await req.json();

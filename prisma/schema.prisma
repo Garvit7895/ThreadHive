@@ -68,6 +68,7 @@ model User {
   communities       Community[]           @relation("UserCommunities")
   memberships       CommunityMembership[]
   posts             Post[]
+  roleAssignments   CommunityMembership[] @relation("RoleAssignedBy") // reverse relation
   comments          Comment[]
   votes             Vote[]
   media             Media[]
@@ -116,6 +117,8 @@ model Community {
   name              String        @unique
   description       String?
   rules             String?
+  avatarUrl         String?       // Community profile image
+  bannerUrl         String?       // Community banner/cover
   createdBy         BigInt
   createdAt         DateTime      @default(now())
 
@@ -165,10 +168,17 @@ model CommunityMembership {
   role           CommunityRole  @default(MEMBER)
   joinedAt       DateTime       @default(now())
 
+  // For tracking Role Assignment
+  assignedBy     BigInt?        // User ID of the promoter
+  promoter       User?          @relation("RoleAssignedBy", fields: [assignedBy], references: [id], onDelete: SetNull)
+
+  // Relations
   community      Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
 
-  @@unique([communityId, userId])
+
+  @@unique([communityId, userId],  name: "communityId_userId") // Prevent duplicate membership
 }
 
 model Post {
