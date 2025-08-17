@@ -54,6 +54,8 @@ model User {
   emailVerified     DateTime?
   VerificationToken String?
   tokenExpiry       DateTime?
+  passResetToken    String?
+  passTokenExpiry   DateTime?
   bio               String?
   avatarUrl         String?
   createdAt         DateTime      @default(now())

@@ -23,3 +23,19 @@ export async function sendVerificationEmail(to: string, token: string) {
     `,
   });
 }
+
+export async function sendPasswordResetEmail(to: string, token: string) {
+  const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password?email=${to}&token=${token}`;
+  await transporter.sendMail({
+    from: `"ThreadHive" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: "Reset your password",
+    html: `
+      <h1>Password Reset</h1>
+      <p>You requested a password reset. Please click the link below to reset your password:</p>
+      <a href="${resetUrl}">Reset Password</a>
+      <p>This link will expire in 1 hour.</p>
+      <p>If you did not request a password reset, please ignore this email.</p>
+    `,
+  });
+}
